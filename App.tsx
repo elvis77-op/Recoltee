@@ -11,16 +11,21 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+import NoteApp from './src/NoteApp';
 
-  return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
-  );
+function App() {
+  return <NoteApp />;
 }
+
+// function App() {
+//   const isDarkMode = useColorScheme() === 'dark';
+//   return (
+//     <SafeAreaProvider>
+//       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+//       <AppContent />
+//     </SafeAreaProvider>
+//   );
+// }
 
 function AppContent() {
   const safeAreaInsets = useSafeAreaInsets();
