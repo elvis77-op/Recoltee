@@ -11,21 +11,32 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
-import NoteApp from './src/NoteApp';
+import * as React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-function App() {
-  return <NoteApp />;
+import HomeScreen from './src/NoteApp';
+// import DetailScreen from './src/AddNote';
+
+const Stack = createNativeStackNavigator();
+
+export default function App() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen
+            name="Home" 
+            component={HomeScreen} 
+            options={{ title: 'home' }} 
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </GestureHandlerRootView>
+  );
 }
 
-// function App() {
-//   const isDarkMode = useColorScheme() === 'dark';
-//   return (
-//     <SafeAreaProvider>
-//       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-//       <AppContent />
-//     </SafeAreaProvider>
-//   );
-// }
 
 function AppContent() {
   const safeAreaInsets = useSafeAreaInsets();
@@ -46,4 +57,3 @@ const styles = StyleSheet.create({
   },
 });
 
-export default App;

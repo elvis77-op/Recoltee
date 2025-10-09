@@ -1,40 +1,62 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Button, FlatList, StyleSheet } from 'react-native';
-import { initDB, addNote, getNotes, deleteNote } from './db';  // ← 根据你的路径调整
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+} from 'react-native';
+import { initDB, addNote, getNotes, editNote, deleteNote } from './db';
+import { BlurView } from '@react-native-community/blur';
+import { SwipeableItem } from './swipeableItem';
 
 const NoteApp = () => {
   const [notes, setNotes] = useState([]);
+  const [editingNote, setEditingNote] = useState(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [visible, setVisible] = useState(false);
 
-  // 初始化数据库 & 读取笔记
   useEffect(() => {
     initDB();
     fetchNotes();
   }, []);
 
-  // 从数据库读取所有笔记
   const fetchNotes = () => {
     getNotes(data => {
       setNotes(data);
     });
   };
 
-  // 添加笔记
   const handleAdd = () => {
     if (!title || !content) return;
-    addNote(title, content, (success) => {
+    addNote(title, content, success => {
       if (success) {
         setTitle('');
         setContent('');
-        fetchNotes(); // 重新刷新列表
+        setVisible(false); 
+        fetchNotes();
       }
     });
   };
+  const handleEdit = () => {
+    if (!title || !content) return;
+    editNote(editingNote.id, title, content, success => {
+      if (success) {
+        setTitle('');
+        setContent('');
+        setEditingNote(null);
+        setVisible(false); 
+        fetchNotes();
+      }
+    });
+  }
 
-  // 删除笔记
-  const handleDelete = (id) => {
-    deleteNote(id, (success) => {
+  const handleDelete = id => {
+    deleteNote(id, success => {
       if (success) {
         fetchNotes();
       }
@@ -43,36 +65,75 @@ const NoteApp = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>📒 笔记列表</Text>
+      {/* 弹窗 */}
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setVisible(false)}
+      >
+        <View style={styles.overlay}>
+          <BlurView style={StyleSheet.absoluteFill} blurType="light" blurAmount={10} />
+          <View style={styles.popup}>
+            <Text style={styles.popupTitle}>📝 New note</Text>
+            <TextInput
+              placeholder="Title"
+              value={title}
+              onChangeText={setTitle}
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="Content"
+              value={content}
+              onChangeText={setContent}
+              style={[styles.input, { height: 80 }]}
+              multiline
+            />
 
-      {/* 输入框 */}
-      <TextInput
-        placeholder="标题"
-        value={title}
-        onChangeText={setTitle}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="内容"
-        value={content}
-        onChangeText={setContent}
-        style={[styles.input, { height: 80 }]}
-        multiline
-      />
-      <Button title="添加笔记" onPress={handleAdd} />
+            {/* 按钮区域并排 */}
+            <View style={styles.buttonRow}>
+              
+              {editingNote ? (
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#007bff' }]} onPress={handleEdit}>
+                  <Text style={styles.actionBtnText}>Save changes</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#007bff' }]} onPress={handleAdd}>
+                  <Text style={styles.actionBtnText}>Add</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#999' }]} onPress={() => {setVisible(false), fetchNotes()}}>
+                <Text style={styles.actionBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
-      {/* 笔记列表 */}
+      {/* 悬浮加号按钮 */}
+      <TouchableOpacity style={styles.fab} onPress={() => setVisible(true)}>
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.header}>📒 Note list</Text>
       <FlatList
         data={notes}
         keyExtractor={item => item.id.toString()}
         renderItem={({ item }) => (
-          <View style={styles.noteItem}>
+          <SwipeableItem
+            onDelete={() => handleDelete(item.id)}
+            onEdit={() => {
+              setEditingNote(item);          
+              setTitle(item.title);   
+              setContent(item.content);   
+              setVisible(true);  
+            }}
+          >
             <View style={{ flex: 1 }}>
               <Text style={styles.noteTitle}>{item.title}</Text>
               <Text style={styles.noteContent}>{item.content}</Text>
             </View>
-            <Button title="删除" onPress={() => handleDelete(item.id)} />
-          </View>
+          </SwipeableItem>
         )}
       />
     </View>
@@ -93,19 +154,54 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 15,
   },
+  overlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popup: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    elevation: 10,
+  },
+  popupTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: '#f1f1f1',
     padding: 10,
     marginBottom: 10,
     borderRadius: 8,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  actionBtn: {
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  actionBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   noteItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    padding: 10,
+    padding: 12,
     marginBottom: 10,
-    borderRadius: 8,
+    borderRadius: 12,
+    elevation: 2,
   },
   noteTitle: {
     fontSize: 16,
@@ -114,5 +210,31 @@ const styles = StyleSheet.create({
   noteContent: {
     fontSize: 14,
     color: '#555',
+    marginTop: 4,
+  },
+  deleteBtn: {
+    backgroundColor: '#ff4d4f',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 40,
+    backgroundColor: '#007bff',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    zIndex: 10,
+  },
+  fabText: {
+    color: 'white',
+    fontSize: 30,
+    lineHeight: 30,
   },
 });
